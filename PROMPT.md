@@ -6,7 +6,7 @@ AI를 위한 개인용 knowledge base. Zettelkasten의 규율을 마크다운 �
 ## 용어
 
 - **ingredient** — pantry에 저장된 노트 하나. 자기완결적·원자적·불변. 개념 설명이 필요할 땐 atom.
-- **dish** — query 결과 ingredient들을 바탕으로 AI가 합성한 2차 산출물. **저장하지 않고 휘발**시킨다. 개념 설명이 필요할 땐 projection. 같은 쿼리면 안정적으로 재현되므로 영속시킬 이유가 없다 — "순정은 부산물을 안 남긴다"의 의미론 버전이다. 벡터 캐시를 안 남기는 것과 dish를 안 남기는 것은 같은 원리(재생성 가능한 건 영속하지 않는다)의 데이터/의미 양면. 영속하는 것은 그 아래 불변 ingredient뿐이다.
+- **dish** — query 결과 ingredient들을 바탕으로 AI가 합성한 2차 산출물. **저장하지 않고 휘발**시킨다. 개념 설명이 필요할 땐 projection. 영속시키지 않는 이유는 "재생성 가능해서"가 아니다 — dish는 결정적이지 않다. 합성하는 LLM도, query가 훑는 ingredient 집합도(KB가 자라고 deprecate되며) 시점마다 달라진다. 오히려 영속시키면 **안 되기** 때문에 휘발시킨다: 저장된 dish는 그 아래 불변 ingredient과 경쟁하는 두 번째의, 더 낡은 진실이 된다. 유일한 진실은 ingredient이고, dish는 그 위에 그때그때 피었다 지는 표면이다.
 
 ## 설계 지반
 
@@ -34,12 +34,17 @@ AI를 위한 개인용 knowledge base. Zettelkasten의 규율을 마크다운 �
 
 - 파일: 마크다운 `.md`
 - 파일명: `YYYY-MM-DD-{slug}-{unique_id}.md` (예: `2026-03-20-how-to-parse-yaml-abcde.md`). 날짜로 정렬되고, slug로 사람이 읽고, id로 안 겹친다. 파일명이 곧 id.
+- slug는 `[a-z0-9-]`만 — 소문자 알파벳·숫자·하이픈. 한국어 개념이면 AI가 영어로 번역해 답는다(음차가 아니라 개념 번역: "MCP 서버 정책" → `mcp-server-policy`). 이렇게 강제하면 파일명·id·wikilink 타겟이 유니코드 정규화(NFD/NFC)·공백·대소문자 파일시스템 문제에서 100% 안전하다. slug는 검색 매칭 필드가 아니라 사람이 훑는 라벨이자 안전한 id일 뿐이라(query는 본문만 매칭 — 아래 query 참조), 영어로 굳혀도 검색력을 잃지 않는다.
 - 링크: `[[wikilink]]` 스타일
 - frontmatter: `createdAt` (정밀 타임스탬프), `deprecatedAt` (없으면 유효, 있으면 낡음)
 
 ### 대체는 뒤를 가리킨다
 
 낡은 노트에 `supersededBy: →` 같은 frontmatter 필드를 박지 않는다. 대신 **새 노트가 본문에서 `[[옛-노트]]`를 wikilink로 가리키며** "저 옛 노트의 이 부분이 틀렸다"고 산문으로 선언한다. 대체의 *이유*는 구조화된 필드가 아니라 본문 문장으로 산다 — frontmatter는 상태(`createdAt`/`deprecatedAt`)만, 내용은 본문. 낡은 노트는 자기가 뭐로 대체됐는지 모르고, 알 필요도 없다. deprecate 사건이 나도 낡은 노트의 `deprecatedAt`만 찍힐 뿐 본문엔 손대지 않는다. 지식은 앞으로만 흐르고 과거는 봉인된다.
+
+### 링크는 id로, 역방향은 순정 밖
+
+wikilink 타겟은 전체 파일명(`[[YYYY-MM-DD-slug-id]]`)으로 적는다 — 유일성은 끝의 id가 지고, slug는 사람이 읽는 장식이라 겹쳐도 무방하다. delete하면 그 노트를 가리키던 링크는 끊기지만 순정은 고치지 않는다: 지식은 앞으로만 흐르고, 끊긴 링크가 있어도 노트는 자기완결이라 의미가 안 무너진다. "무엇이 이 노트를 가리키나"(역링크)를 알려면 전체를 훑는 역인덱스가 필요한데, 그건 재생성 가능한 파생 상태라 순정의 책임이 아니다 — 필요하면 plugin이 full-scan으로 진다(plugin 훅의 beforeDelete "링크 남은 노트 삭제 막기" 가드가 순정이 아닌 것도 같은 이유).
 
 ### 날짜 스냅샷으로 deprecate를 피한다
 
@@ -49,8 +54,8 @@ AI를 위한 개인용 knowledge base. Zettelkasten의 규율을 마크다운 �
 
 `plugin`을 뺀 나머지는 ingredient에 대응한다.
 
-- **create** — 새 `.md` ingredient 생성. `createdAt` 기록.
-- **query** — full-scan lexical 검색. **파일명(=id)만** 관련도순으로, 페이지네이션해서 돌려준다. 본문은 주지 않는다 — "어느 노트가 관련 있나"만 답하고, "그 노트가 뭐라 하나"는 `read`가 답한다. deprecated는 기본 숨김(명시적으로 부를 때만 노출).
+- **create** — 새 `.md` ingredient 생성. 본문(마크다운 텍스트)과 slug를 **둘 다 명시적 인자로** 받는다. slug를 본문에서 뽑지 않는다 — "이 노트의 핵심이 뭔가"는 판단이고, 판단은 소비자(AI)의 몫이다. pantry는 받은 slug로 파일명(`YYYY-MM-DD-{slug}-{id}.md`)을 조립하고 `createdAt`을 찍을 뿐, 본문을 들여다보지 않는다.
+- **query** — full-scan lexical 검색. 관련도는 **본문 BM25**로 매긴다(slug 필드 부스트 없음 — slug는 매칭 필드가 아니라 라벨이므로, "어느 필드를 얼마나 가중하나"라는 판단이 없다). 한국어가 섞이므로 토큰화는 유니코드 정규화 + 소문자 + 문장부호 분리에 CJK는 bi-gram, 다중 단어는 OR + 부분점수(많이 겹칠수록 위로)로 둔다. **파일명(=id)**을 관련도순으로 페이지네이션해 돌려준다(매칭 근처 스니펫을 곁들일 수 있으나 본문 전체는 아니다) — "어느 노트가 관련 있나"까지만 답하고, "그 노트가 뭐라 하나"는 `read`가 답한다. `--hash`를 주면 각 핸들에 본문 content-address(`id #<sha256>`)를 붙인다: 저장 0의 결정적 순수함수라 상태를 안 남기면서 위성이 자기 캐시를 무효화할 공용 어휘가 된다(본문만 해싱 — deprecated 플래그가 찍혀도 내용은 안 변하므로 주소를 흔들지 않는다). deprecated는 기본 숨김(명시적으로 부를 때만 노출).
 - **read** — 파일명(=id)으로 ingredient 하나를 펼친다. query가 준 핸들을 받아 본문을 읽는 짝. 순정 명령으로 두는 이유는 plugin이 훅을 걸 수 있게 하기 위함(예: afterRead에서 관련 노트 추천, deprecated 경고). 순정 동작은 그냥 `.md`를 읽어 돌려주는 것이며, pantry 없이 파일을 직접 읽어도 데이터는 동일하다.
 - **fix** — 오타/오기 교정. 의미 보존, 물리적 덮어쓰기 허용.
 
@@ -65,6 +70,31 @@ ingredient에 대응하지 않는 메타 명령 둘:
 ## plugin
 
 pantry의 역할을 확장한다. **명령을 추가하거나, 기존 명령을 확장할 수 있다. 대체는 없다.**
+
+### 등록
+
+plugin은 npm 패키지다. `pantry plugin`의 세 서브커맨드로 관리한다.
+
+- **add** — `pantry plugin add @pantry/summary '<description>'`. 패키지명과 사람이 쓴 한 줄 설명을 config의 활성 목록에 등록순으로 append한다. pantry는 패키지가 뭘 하는지 모른다 — 이름과 설명은 불투명한 핸들일 뿐이고, 등록 순서가 곧 훅 체인 순서다.
+- **remove** — `pantry plugin remove @pantry/summary`. 목록에서 뺀다. 부산물 정리는 plugin 몫(순정은 격리 구역을 지울 뿐).
+- **list** — 활성 목록을 등록순으로, 각자의 description과 함께 보여준다.
+
+pantry가 하는 일은 목록을 config에 갈무리하고(등록순 보존) 실행 시 순서대로 `import`해 훅·명령을 거는 것뿐이다. 설치 자체(패키지가 디스크에 있게 하는 것)는 npm의 몫이고 pantry는 이름으로 로드만 한다.
+
+### 실행
+
+plugin이 새로 다는 명령은 **패키지명 아래에 가둬** 부른다: `pantry plugin run @pantry/summary search <나머지 argv>`. pantry는 argv를 그 패키지의 `commands['search'].run(나머지, ctx)`로 넘길 뿐, 이름을 top-level에 병합하지 않는다. 이게 dumb 원칙의 따름정리다 — top-level로 올리면 "누구의 `search`가 이기나"를 pantry가 판단해야 하는데, 패키지명으로 가두면 **충돌이란 게 발생 불가능**하다. hooks가 core 동사에 얹히는 암묵적 보강이라면, commands는 `run`으로만 불리는 명시적 동사다(자동 발화 없음).
+
+`ctx`엔 순정 read-only 동사(`query`/`read`)만 준다. plugin 명령도 KB를 생 fs가 아니라 순정 동사로만 보게 해 "코어 불가침"을 실행 경로에서도 지킨다.
+
+```ts
+commands?: {
+  [name: string]: {
+    description: string
+    run: (args, ctx) => result   // ctx: { query, read } — read-only
+  }
+}
+```
 
 - **불가침: 명령의 코어 의미.** create는 언제나 `.md`를 쓰고, query는 언제나 lexical을 한다 — 어떤 plugin을 켜도. plugin은 명령의 입·출력 파이프라인을 주무르되(before는 입력 변형, after는 출력 보강), 코어 동작은 못 건드린다. create의 코어("`.md` 쓰기")와 query의 코어("lexical 매칭")는 성역이다.
 
@@ -130,8 +160,4 @@ plugin의 모든 부산물은 plugin 소유이며, 순정이 정한 격리 구�
 
 ## 열린 질문
 
-- **create 입력 명세** — 무엇을 받나. 마크다운 본문 텍스트만? 제목/slug는 별도 인자인가 본문에서 뽑나. (파일명의 slug를 어디서 얻는지가 여기 걸림.)
-- **wikilink 타겟 표기** — `[[slug]]`인가 `[[YYYY-MM-DD-slug-id]]`(전체 파일명)인가. slug는 유일하지 않고, 전체 파일명은 delete 시 깨진다. 대체 링크가 본문 wikilink로 사는 게 정해졌으니 이 표기를 확정해야 한다.
-- **plugin `commands` 인터페이스** — 새 명령의 시그니처, 기존 명령명과 충돌 시 처리.
-- **관련도 계산법** — lexical이라고만 정함. BM25 / TF-IDF / 단순 매칭 중 무엇인지, 파일명 대 본문 가중치. (구현 디테일이라 후순위.)
-- plugin 모듈을 물리적으로 어디에 두고 어떻게 로드하나 (config의 활성 목록이 켬/끔·순서를 정한다는 건 정해짐)
+- **unique_id 생성** — 무엇으로 만드나(랜덤 N자? nanoid?), 충돌 시 처리. (사소하나 파일명 조립 함수가 요구.)
