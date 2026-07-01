@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "pantry",
+  "owner": {
+    "name": "znagadeon"
+  },
+  "metadata": {
+    "description": "pantry — AI 지식베이스 CLI와 그 위성 스킬을 한 레포에 모은 마켓플레이스",
+    "pluginRoot": "./marketplace/plugins"
+  },
+  "plugins": [
+    {
+      "name": "pantry",
+      "source": "./marketplace/plugins/pantry",
+      "description": "Pantry KB — AI 지식베이스 CLI 래퍼. capture는 query→write 강제, recall은 다중 grep, 자기완결 ingredient 규약으로 pantry CLI를 호출"
+    }
+  ]
+}
