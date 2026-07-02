@@ -13,7 +13,7 @@
 
 import { bodyHash, type NutFile, type Plugin, type QueryHit } from '@pantrykb/core'
 import { cosine, type Embedder, localEmbedder } from './embedder.js'
-import { readAllVecs, writeVec, deleteVec, type VecRecord } from './store.js'
+import { readAllVecs, readVec, writeVec, deleteVec, type VecRecord } from './store.js'
 
 // 벡터 이웃을 몇 개까지 후보로 볼지. lexical에 없는 것만 추려 붙이므로
 // 실제 추가분은 이보다 적다. 너무 크면 관련 낮은 노트가 꼬리에 붙는다.
@@ -29,10 +29,54 @@ async function embed(embedder: Embedder, dir: string, note: NutFile): Promise<vo
   await writeVec(dir, note.id, rec)
 }
 
+/**
+ * 이 노트가 현재 모델로 이미 임베딩됐나. init 멱등의 판정 축은 (model, hash) 쌍 —
+ * afterFix가 hash로 낡음을 재우는 것과 같은 계약이다. model이 다르면(모델 교체) hash가
+ * 같아도 재임베딩하고, hash가 다르면(본문 변경) 재임베딩한다. 둘 다 맞을 때만 건너뛴다.
+ */
+async function isEmbedded(dir: string, id: string, model: string, body: string): Promise<boolean> {
+  const rec = await readVec(dir, id)
+  return rec !== null && rec.model === model && rec.hash === bodyHash(body)
+}
+
 /** embedder를 주입해 plugin을 만든다. 기본은 로컬 다국어 모델. */
 export function createSemanticPlugin(embedder: Embedder = localEmbedder()): Plugin {
   return {
     name: 'semantic',
+
+    commands: {
+      init: {
+        description:
+          'KB의 모든 노트를 훑어 아직 벡터가 없는(또는 낡은/다른 모델의) 것만 임베딩한다. 옛 CLI로 만든 노트나 이 plugin을 뒤늦게 켠 KB를 소급 임베딩하는 backfill. 멱등 — 이미 현재 모델로 임베딩된 노트는 건너뛴다.',
+        // 순정 query는 전체를 주지 않고 DEFAULT_LIMIT로 자르므로 offset으로 끝까지 페이지네이션한다.
+        // deprecated도 포함해 임베딩한다 — afterQuery가 가시성(deprecated 숨김)을 검색 시점에
+        // 이미 거르므로, 벡터 자체는 미리 있어도 무해하고 나중에 되살아나도 재임베딩이 불필요하다.
+        async run(_args, ctx) {
+          const PAGE = 100
+          let offset = 0
+          let embedded = 0
+          let skipped = 0
+          let scanned = 0
+          for (;;) {
+            const hits = await ctx.query({ text: '', includeDeprecated: true, offset, limit: PAGE })
+            if (hits.length === 0) break
+            for (const hit of hits) {
+              scanned++
+              const note = await ctx.read(hit.id)
+              if (note === null) continue // 열거와 read 사이에 사라진 노트: 건너뛴다.
+              if (await isEmbedded(ctx.dir, note.id, embedder.model, note.body)) {
+                skipped++
+                continue
+              }
+              await embed(embedder, ctx.dir, note)
+              embedded++
+            }
+            offset += hits.length
+          }
+          return { model: embedder.model, scanned, embedded, skipped }
+        },
+      },
+    },
 
     hooks: {
       // 새 노트를 임베딩해 격리 구역에 쟁인다. 코어 결과는 못 바꾼다(void).

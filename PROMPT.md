@@ -157,7 +157,7 @@ plugin의 모든 부산물은 plugin 소유이며, 순정이 정한 격리 구�
 ### 후보
 
 - **random** — 노트 하나 무작위로 꺼냄 (새 명령어 추가).
-- **semantic** — 벡터 임베딩으로 검색 보강(`plugins/semantic`, 구현됨). afterCreate에서 노트를 임베딩해 격리 구역(`vec/{id}.json`, `{model,hash,vector}`)에 쟁이고, afterQuery에서 질의를 임베딩해 의미적 이웃을 **합집합 + lexical floor**로 보탠다 — lexical hit은 순서·점수 그대로 두고 그 뒤에 벡터 전용 후보만 붙인다(BM25·코사인을 한 스케일로 안 섞음). 벡터엔 `model`을 태그해 모델·차원이 바뀌면 옛 벡터를 무시하고, 이웃은 `ctx.read`로 실체 검증해 삭제·deprecated를 거른다. embedder는 주입식(core의 now/newId와 같은 결) — 실사용 기본은 로컬 다국어 모델(multilingual-e5-small, 오프라인·무키), 테스트는 결정적 fake. create·fix 둘 다 afterCreate/afterFix로 (재)임베딩하므로 fix 후에도 벡터·hash가 새 본문을 좇는다(content-address 불일치 없음). 순수 벡터 검색은 포기 — lexical이 항상 바닥.
+- **semantic** — 벡터 임베딩으로 검색 보강(`plugins/semantic`, 구현됨). afterCreate에서 노트를 임베딩해 격리 구역(`vec/{id}.json`, `{model,hash,vector}`)에 쟁이고, afterQuery에서 질의를 임베딩해 의미적 이웃을 **합집합 + lexical floor**로 보탠다 — lexical hit은 순서·점수 그대로 두고 그 뒤에 벡터 전용 후보만 붙인다(BM25·코사인을 한 스케일로 안 섞음). 벡터엔 `model`을 태그해 모델·차원이 바뀌면 옛 벡터를 무시하고, 이웃은 `ctx.read`로 실체 검증해 삭제·deprecated를 거른다. embedder는 주입식(core의 now/newId와 같은 결) — 실사용 기본은 로컬 다국어 모델(multilingual-e5-small, 오프라인·무키), 테스트는 결정적 fake. create·fix 둘 다 afterCreate/afterFix로 (재)임베딩하므로 fix 후에도 벡터·hash가 새 본문을 좇는다(content-address 불일치 없음). 순수 벡터 검색은 포기 — lexical이 항상 바닥. `plugin run @pantrykb/plugin-semantic init`은 KB 전체를 훑어 벡터 없는(또는 낡은·다른 모델의) 노트만 소급 임베딩하는 backfill이다 — 옛 노트나 plugin을 뒤늦게 켠 KB용. 멱등: 판정은 hook과 같은 (model, hash) 축이라 이미 현재 모델로 임베딩된 노트는 건너뛴다.
 
 ## 스케일
 

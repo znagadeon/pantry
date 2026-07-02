@@ -158,6 +158,60 @@ describe('semantic plugin', () => {
     expect(await readdir(join(ctx.dir, 'vec'))).toHaveLength(0)
   })
 
+  it('init backfills notes that have no vector yet, and is idempotent', async () => {
+    const pantry = makePantry()
+    const ctx = ctxFor(pantry)
+    const plugin = createSemanticPlugin(fakeEmbedder([['alpha'], ['beta']]))
+    // 세 노트를 순정으로만 만든다(afterCreate 안 돌림) → 벡터 0인 "옛 CLI KB" 재현.
+    await pantry.create({ slug: 'a', body: 'alpha one' })
+    await pantry.create({ slug: 'b', body: 'beta two' })
+    await pantry.create({ slug: 'c', body: 'alpha beta three' })
+
+    const first = (await plugin.commands!.init!.run([], ctx)) as {
+      scanned: number
+      embedded: number
+      skipped: number
+    }
+    expect(first).toMatchObject({ scanned: 3, embedded: 3, skipped: 0 })
+    expect(await readdir(join(ctx.dir, 'vec'))).toHaveLength(3)
+
+    // 재실행은 전부 스킵(멱등) — 같은 model·hash라 다시 임베딩하지 않는다.
+    const second = (await plugin.commands!.init!.run([], ctx)) as { embedded: number; skipped: number }
+    expect(second).toMatchObject({ embedded: 0, skipped: 3 })
+
+    // 그리고 backfill된 벡터로 afterQuery가 실제로 이웃을 찾는다.
+    const hits = await plugin.hooks!.afterQuery!(ctx, { text: 'alpha' }, [])
+    expect(hits.length).toBeGreaterThan(0)
+  })
+
+  it('init re-embeds when the model changed', async () => {
+    const pantry = makePantry()
+    const ctx = ctxFor(pantry)
+    const f = await pantry.create({ slug: 'a', body: 'topic here' })
+    // 옛 모델로 먼저 임베딩.
+    await createSemanticPlugin(fakeEmbedder([['topic']], 'old-model')).hooks!.afterCreate!(
+      ctx,
+      { slug: 'a', body: f.body },
+      f,
+    )
+    // 새 모델의 init은 hash가 같아도 model이 달라 재임베딩한다(스킵 아님).
+    const newPlugin = createSemanticPlugin(fakeEmbedder([['topic']], 'new-model'))
+    const res = (await newPlugin.commands!.init!.run([], ctx)) as { embedded: number; skipped: number }
+    expect(res).toMatchObject({ embedded: 1, skipped: 0 })
+    expect((await readVec(ctx.dir, f.id))!.model).toBe('new-model')
+  })
+
+  it('init paginates past the core query limit (>20 notes)', async () => {
+    const pantry = makePantry()
+    const ctx = ctxFor(pantry)
+    const plugin = createSemanticPlugin(fakeEmbedder([['n']]))
+    // 순정 query의 DEFAULT_LIMIT=20을 넘겨, init이 offset으로 끝까지 훑는지 본다.
+    for (let i = 0; i < 25; i++) await pantry.create({ slug: `n${i}`, body: `note ${i}` })
+    const res = (await plugin.commands!.init!.run([], ctx)) as { scanned: number; embedded: number }
+    expect(res).toMatchObject({ scanned: 25, embedded: 25 })
+    expect(await readdir(join(ctx.dir, 'vec'))).toHaveLength(25)
+  })
+
   it('ignores vectors from a different model (dimension/quality mismatch)', async () => {
     const pantry = makePantry()
     const ctx = ctxFor(pantry)
