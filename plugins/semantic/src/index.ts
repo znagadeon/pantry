@@ -11,7 +11,7 @@
 // content-address가 거짓이 되므로. semantic이 이 훅을 요구해 코어가 afterFix를 열었다.
 // 진짜 내용 변화는 여전히 fix가 아니라 새 노트+deprecate로 다뤄진다.
 
-import { bodyHash, type IngredientFile, type Plugin, type QueryHit } from '@pantrykb/core'
+import { bodyHash, type NutFile, type Plugin, type QueryHit } from '@pantrykb/core'
 import { cosine, type Embedder, localEmbedder } from './embedder.js'
 import { readAllVecs, writeVec, deleteVec, type VecRecord } from './store.js'
 
@@ -22,7 +22,7 @@ const NEIGHBORS = 10
 const MIN_SIMILARITY = 0.75
 
 /** 노트 하나를 임베딩해 격리 구역에 벡터 레코드로 쓴다. create·fix가 공유. */
-async function embed(embedder: Embedder, dir: string, note: IngredientFile): Promise<void> {
+async function embed(embedder: Embedder, dir: string, note: NutFile): Promise<void> {
   const [vector] = await embedder.embedDocuments([note.body])
   if (!vector) return
   const rec: VecRecord = { model: embedder.model, hash: bodyHash(note.body), vector }
@@ -36,12 +36,12 @@ export function createSemanticPlugin(embedder: Embedder = localEmbedder()): Plug
 
     hooks: {
       // 새 노트를 임베딩해 격리 구역에 쟁인다. 코어 결과는 못 바꾼다(void).
-      async afterCreate(ctx, _input, result: IngredientFile) {
+      async afterCreate(ctx, _input, result: NutFile) {
         await embed(embedder, ctx.dir, result)
       },
 
       // fix(의미보존 덮어쓰기) 후 재임베딩 — 낡은 벡터·hash를 새 본문으로 덮는다.
-      async afterFix(ctx, result: IngredientFile) {
+      async afterFix(ctx, result: NutFile) {
         await embed(embedder, ctx.dir, result)
       },
 

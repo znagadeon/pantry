@@ -1,7 +1,7 @@
 {
   "name": "@pantrykb/cli",
   "version": "0.1.0",
-  "description": "pantry CLI — AI를 위한 개인용 knowledge base. `pantry` 명령으로 .md ingredient를 create/query/read/fix/deprecate/delete하고 plugin으로 확장한다.",
+  "description": "pantry CLI — AI를 위한 개인용 knowledge base. `pantry` 명령으로 .md 노트를 create/query/read/fix/deprecate/delete하고 plugin으로 확장한다.",
   "license": "MIT",
   "author": "Kim Songhyun",
   "repository": {

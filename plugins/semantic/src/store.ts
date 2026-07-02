@@ -1,6 +1,6 @@
 // 벡터 부산물 I/O. 전부 격리 구역(ctx.dir = .pantry/plugins/semantic/) 안에서만 산다 —
 // 이 밖은 쓰지 않는다("순정 디렉토리는 언제나 .md만"). plugin을 끄고 이 구역을 통째로
-// 지워도 ingredient는 멀쩡하다: 벡터는 재생성 가능한 파생 상태다.
+// 지워도 nut은 멀쩡하다: 벡터는 재생성 가능한 파생 상태다.
 //
 // 노트당 파일 하나(vec/{id}.json). afterCreate는 하나만 증분으로 쓰고, query는
 // 디렉토리를 full-scan 한다 — 인덱스를 안 쌓는 순정 query와 같은 결. ~10만 규모에서

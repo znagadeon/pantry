@@ -14,12 +14,12 @@ import { parse, serialize } from './frontmatter.js'
 import { tokenize } from './tokenize.js'
 import type {
   CreateInput,
-  IngredientFile,
-  IngredientFrontmatter,
+  NutFile,
+  NutFrontmatter,
   QueryHit,
   QueryInput,
 } from './types.js'
-import { assertSlug, bodyHash, ingredientId } from './util.js'
+import { assertSlug, bodyHash, nutId } from './util.js'
 
 const EXT = '.md'
 const DEFAULT_LIMIT = 20
@@ -55,15 +55,15 @@ export class Pantry {
   }
 
   /** 본문+slug를 받아 .md를 쓴다. createdAt을 찍고, 본문은 들여다보지 않는다. */
-  async create(input: CreateInput): Promise<IngredientFile> {
+  async create(input: CreateInput): Promise<NutFile> {
     assertSlug(input.slug)
     const now = this.now()
     const createdAt = now.toISOString()
     const date = createdAt.slice(0, 10) // YYYY-MM-DD
-    const id = ingredientId(date, input.slug, this.newId())
+    const id = nutId(date, input.slug, this.newId())
 
-    const frontmatter: IngredientFrontmatter = { slug: input.slug, createdAt }
-    const file: IngredientFile = { id, frontmatter, body: input.body }
+    const frontmatter: NutFrontmatter = { slug: input.slug, createdAt }
+    const file: NutFile = { id, frontmatter, body: input.body }
 
     await mkdir(this.root, { recursive: true })
     // wx: 이미 있으면 실패 — id 충돌을 조용히 덮어쓰지 않는다(불변 계약).
@@ -105,8 +105,8 @@ export class Pantry {
     })
   }
 
-  /** id로 ingredient 하나를 펼친다. 없으면 null. */
-  async read(id: string): Promise<IngredientFile | null> {
+  /** id로 nut 하나를 펼친다. 없으면 null. */
+  async read(id: string): Promise<NutFile | null> {
     let text: string
     try {
       text = await readFile(this.pathOf(id), 'utf8')
@@ -118,9 +118,9 @@ export class Pantry {
   }
 
   /** 오타 교정. 의미 보존, 물리적 덮어쓰기 허용. frontmatter는 그대로 둔다. */
-  async fix(id: string, body: string): Promise<IngredientFile> {
+  async fix(id: string, body: string): Promise<NutFile> {
     const existing = await this.read(id)
-    if (existing === null) throw new Error(`no such ingredient: ${id}`)
+    if (existing === null) throw new Error(`no such note: ${id}`)
     await writeFile(this.pathOf(id), serialize(existing.frontmatter, body), 'utf8')
     return { ...existing, body }
   }
@@ -128,9 +128,9 @@ export class Pantry {
   /** deprecatedAt을 찍는다. 본문엔 손대지 않는다. */
   async deprecate(id: string): Promise<void> {
     const existing = await this.read(id)
-    if (existing === null) throw new Error(`no such ingredient: ${id}`)
+    if (existing === null) throw new Error(`no such note: ${id}`)
     if (existing.frontmatter.deprecatedAt !== undefined) return // 멱등
-    const frontmatter: IngredientFrontmatter = {
+    const frontmatter: NutFrontmatter = {
       ...existing.frontmatter,
       deprecatedAt: this.now().toISOString(),
     }
@@ -152,7 +152,7 @@ export class Pantry {
   }
 
   /** KB 루트의 모든 .md를 파싱해 돌려준다. 루트가 없으면 빈 배열. */
-  private async readAll(): Promise<IngredientFile[]> {
+  private async readAll(): Promise<NutFile[]> {
     let names: string[]
     try {
       names = await readdir(this.root)

@@ -11,7 +11,7 @@ import { join } from 'node:path'
 
 import type {
   CreateInput,
-  IngredientFile,
+  NutFile,
   Pantry,
   Plugin,
   PluginContext,
@@ -77,7 +77,7 @@ export class Runtime {
     }))
   }
 
-  async create(input: CreateInput): Promise<IngredientFile> {
+  async create(input: CreateInput): Promise<NutFile> {
     // beforeCreate: 등록순 파이프. 앞 훅 출력이 뒤 훅 입력. throw면 abort(시끄럽게).
     let shaped = input
     for (const { plugin, ctx } of this.loaded) {
@@ -105,7 +105,7 @@ export class Runtime {
     return hits
   }
 
-  async read(id: string): Promise<IngredientFile | null> {
+  async read(id: string): Promise<NutFile | null> {
     // beforeRead: id를 redirect하거나 abort. 등록순 파이프.
     let target = id
     for (const { plugin, ctx } of this.loaded) {
@@ -119,7 +119,7 @@ export class Runtime {
     return note
   }
 
-  async fix(id: string, body: string): Promise<IngredientFile> {
+  async fix(id: string, body: string): Promise<NutFile> {
     // beforeFix: body를 등록순 파이프로 shape하거나 throw로 abort. id는 정체성이라 안 넘긴다.
     // create와 대칭 — beforeCreate가 거는 body 변형이 fix에도 걸려야 plugin invariant가 안 샌다.
     let shaped = body

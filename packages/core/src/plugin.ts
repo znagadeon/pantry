@@ -1,7 +1,7 @@
 // plugin 계약. plugin은 아래 객체를 default export하는 npm 패키지다.
 // 불가침: 명령의 코어 의미(create는 .md 쓰기, query는 lexical). plugin은 파이프라인만 주무른다.
 
-import type { CreateInput, IngredientFile, QueryHit, QueryInput } from './types.js'
+import type { CreateInput, NutFile, QueryHit, QueryInput } from './types.js'
 
 /** 훅·plugin 명령이 받는 컨텍스트. */
 export type PluginContext = {
@@ -12,7 +12,7 @@ export type PluginContext = {
    * plugin도 KB를 순정 동사로만 봐서 "코어 불가침"이 실행 경로에서도 지켜진다.
    */
   query: (input: QueryInput) => Promise<QueryHit[]>
-  read: (id: string) => Promise<IngredientFile | null>
+  read: (id: string) => Promise<NutFile | null>
 }
 
 /** plugin이 `plugin run <pkg> <name>`으로 노출하는 새 명령. */
@@ -49,16 +49,16 @@ export type PluginHooks = {
   /** deprecate 전 abort 가드(예: 링크 남은 노트 deprecate 막기) 또는 id redirect. */
   beforeDeprecate?: (ctx: PluginContext, id: string) => string | Promise<string>
   beforeDelete?: (ctx: PluginContext, id: string) => string | Promise<string>
-  afterCreate?: (ctx: PluginContext, input: CreateInput, result: IngredientFile) => void | Promise<void>
+  afterCreate?: (ctx: PluginContext, input: CreateInput, result: NutFile) => void | Promise<void>
   /**
    * fix 뒤 부산물 갱신(→void, 코어 결과 불가침). result가 새 본문을 지녀 재파생(예: 재임베딩)에
    * 충분하다. 안 갱신하면 본문-파생 부산물(벡터·hash)이 옛 본문에 묶여 content-address가 거짓이 된다.
    */
-  afterFix?: (ctx: PluginContext, result: IngredientFile) => void | Promise<void>
+  afterFix?: (ctx: PluginContext, result: NutFile) => void | Promise<void>
   afterDelete?: (ctx: PluginContext, id: string) => void | Promise<void>
   afterDeprecate?: (ctx: PluginContext, id: string) => void | Promise<void>
   afterQuery?: (ctx: PluginContext, input: QueryInput, hits: QueryHit[]) => QueryHit[] | Promise<QueryHit[]>
-  afterRead?: (ctx: PluginContext, id: string, note: IngredientFile) => IngredientFile | Promise<IngredientFile>
+  afterRead?: (ctx: PluginContext, id: string, note: NutFile) => NutFile | Promise<NutFile>
 }
 
 export type Plugin = {

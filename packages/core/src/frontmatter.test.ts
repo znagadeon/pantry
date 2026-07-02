@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { parse, serialize } from './frontmatter.js'
 
 describe('frontmatter serialize/parse', () => {
-  it('round-trips a minimal ingredient', () => {
+  it('round-trips a minimal nut', () => {
     const fm = { slug: 'parse-yaml', createdAt: '2026-03-20T10:00:00.000Z' }
     const body = '# 제목\n\n본문이다.\n'
     const round = parse('2026-03-20-parse-yaml-abcde', serialize(fm, body))

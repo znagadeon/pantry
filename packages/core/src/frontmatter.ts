@@ -3,7 +3,7 @@
 // 스칼라(slug=[a-z0-9-], 타임스탬프=ISN)라 인용·중첩·리스트가 필요 없다.
 // "앱이 죽어도 데이터는 산다": 사람이 열고 grep이 훑을 최소 텍스트 형태를 고른다.
 
-import type { IngredientFile, IngredientFrontmatter } from './types.js'
+import type { NutFile, NutFrontmatter } from './types.js'
 
 const FENCE = '---'
 
@@ -13,7 +13,7 @@ const FENCE = '---'
  * content-address(bodyHash)가 create의 인메모리 본문과 read의 디스크 본문 사이에서
  * 흔들리지 않는다. 왕복 안정성이 POSIX 개행 관례보다 우선한다.
  */
-export function serialize(fm: IngredientFrontmatter, body: string): string {
+export function serialize(fm: NutFrontmatter, body: string): string {
   const lines = [`slug: ${fm.slug}`, `createdAt: ${fm.createdAt}`]
   if (fm.deprecatedAt !== undefined) lines.push(`deprecatedAt: ${fm.deprecatedAt}`)
   return `${FENCE}\n${lines.join('\n')}\n${FENCE}\n${body}`
@@ -24,7 +24,7 @@ export function serialize(fm: IngredientFrontmatter, body: string): string {
  * frontmatter 블록이 없거나 slug/createdAt이 없으면 시끄럽게 throw —
  * 순정 디렉토리엔 순정이 쓴 .md만 있다는 계약을 깨는 파일이면 알아야 한다.
  */
-export function parse(id: string, text: string): IngredientFile {
+export function parse(id: string, text: string): NutFile {
   const lines = text.split('\n')
   if (lines[0]?.trim() !== FENCE) {
     throw new Error(`missing frontmatter fence in ${id}`)
@@ -38,7 +38,7 @@ export function parse(id: string, text: string): IngredientFile {
   }
   if (end === -1) throw new Error(`unterminated frontmatter in ${id}`)
 
-  const fm: Partial<IngredientFrontmatter> = {}
+  const fm: Partial<NutFrontmatter> = {}
   for (let i = 1; i < end; i++) {
     const line = lines[i]!
     if (line.trim() === '') continue
@@ -58,7 +58,7 @@ export function parse(id: string, text: string): IngredientFile {
   const body = lines.slice(end + 1).join('\n')
   return {
     id,
-    frontmatter: fm as IngredientFrontmatter,
+    frontmatter: fm as NutFrontmatter,
     body,
   }
 }

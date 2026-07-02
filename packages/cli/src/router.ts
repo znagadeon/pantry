@@ -7,10 +7,10 @@ import { buildRuntime, type Importer } from './runtime.js'
 
 const USAGE = `pantry <command> [args]
 
-ingredient verbs:
+verbs:
   create --slug <slug> [--body <text>]   새 .md 생성 (본문 생략 시 stdin)
   query <text...> [--limit N --offset N --hash --include-deprecated]
-  read <id>                              id로 ingredient 하나 펼침
+  read <id>                              id로 하나 펼침
   fix <id> [--body <text>]               오타 교정 (본문 생략 시 stdin)
   deprecate <id>                         deprecatedAt 찍기
   delete <id>                            물리적 소멸
@@ -93,7 +93,7 @@ async function runRead(args: string[], io: Io): Promise<void> {
   const id = requirePositional(args, 'id')
   const rt = await runtime(io)
   const note = await rt.read(id)
-  if (note === null) throw new Error(`no such ingredient: ${id}`)
+  if (note === null) throw new Error(`no such note: ${id}`)
   emit(io, note)
 }
 

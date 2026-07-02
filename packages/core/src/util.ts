@@ -24,7 +24,7 @@ export function bodyHash(body: string): string {
  * 파일명(=id) 조립. `YYYY-MM-DD-{slug}-{id}`. 확장자는 붙이지 않는다(id는 확장자 제외).
  * date는 호출자가 주입한다(코어는 시계를 직접 읽지 않아 결정적으로 남는다).
  */
-export function ingredientId(date: string, slug: string, uniqueId: string): string {
+export function nutId(date: string, slug: string, uniqueId: string): string {
   assertSlug(slug)
   return `${date}-${slug}-${uniqueId}`
 }

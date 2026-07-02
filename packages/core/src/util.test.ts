@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { assertSlug, bodyHash, ingredientId } from './util.js'
+import { assertSlug, bodyHash, nutId } from './util.js'
 
 describe('assertSlug', () => {
   it('accepts lowercase alphanumeric and hyphens', () => {
@@ -23,9 +23,9 @@ describe('bodyHash', () => {
   })
 })
 
-describe('ingredientId', () => {
+describe('nutId', () => {
   it('assembles date-slug-id and validates the slug', () => {
-    expect(ingredientId('2026-03-20', 'parse-yaml', 'abcde')).toBe('2026-03-20-parse-yaml-abcde')
-    expect(() => ingredientId('2026-03-20', 'Bad Slug', 'abcde')).toThrow()
+    expect(nutId('2026-03-20', 'parse-yaml', 'abcde')).toBe('2026-03-20-parse-yaml-abcde')
+    expect(() => nutId('2026-03-20', 'Bad Slug', 'abcde')).toThrow()
   })
 })

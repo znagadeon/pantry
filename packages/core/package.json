@@ -1,7 +1,7 @@
 {
   "name": "@pantrykb/core",
   "version": "0.1.0",
-  "description": "pantry의 순정 코어 — .md ingredient에 대한 6개 동사와 lexical query. AI를 위한 개인용 knowledge base.",
+  "description": "pantry의 순정 코어 — .md 노트에 대한 6개 동사와 lexical query. AI를 위한 개인용 knowledge base.",
   "license": "MIT",
   "author": "Kim Songhyun",
   "repository": {

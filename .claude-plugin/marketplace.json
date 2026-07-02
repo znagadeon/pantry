@@ -12,7 +12,7 @@
     {
       "name": "pantry",
       "source": "./marketplace/plugins/pantry",
-      "description": "Pantry KB — AI 지식베이스 CLI 래퍼. capture는 query→write 강제, recall은 다중 grep, 자기완결 ingredient 규약으로 pantry CLI를 호출"
+      "description": "Pantry KB — AI 지식베이스 CLI 래퍼. capture는 query→write 강제, recall은 다중 grep, 자기완결 노트 규약으로 pantry CLI를 호출"
     }
   ]
 }

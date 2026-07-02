@@ -1,7 +1,7 @@
 export type {
   CreateInput,
-  IngredientFile,
-  IngredientFrontmatter,
+  NutFile,
+  NutFrontmatter,
   QueryHit,
   QueryInput,
 } from './types.js'
@@ -12,4 +12,4 @@ export type {
   PluginHooks,
 } from './plugin.js'
 export { Pantry, type PantryConfig } from './pantry.js'
-export { assertSlug, bodyHash, ingredientId } from './util.js'
+export { assertSlug, bodyHash, nutId } from './util.js'

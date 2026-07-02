@@ -44,7 +44,7 @@ describe('create', () => {
 })
 
 describe('read', () => {
-  it('round-trips a created ingredient and returns null for unknown id', async () => {
+  it('round-trips a created nut and returns null for unknown id', async () => {
     const p = makePantry({ ids: ['id1'] })
     const created = await p.create({ slug: 's', body: '# hi\n\ncontent\n' })
     const read = await p.read(created.id)

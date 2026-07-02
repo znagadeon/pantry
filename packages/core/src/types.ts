@@ -1,7 +1,7 @@
 // pantry의 데이터 계약. 순정이 아는 유일한 형태는 .md 파일과 그 frontmatter다.
 
-/** ingredient의 frontmatter. 상태만 담는다 — 내용은 본문(산문)이 진다. */
-export type IngredientFrontmatter = {
+/** nut의 frontmatter. 상태만 담는다 — 내용은 본문(산문)이 진다. */
+export type NutFrontmatter = {
   /** 사람이 읽는 라벨이자 파일명 조각. `[a-z0-9-]`만. 검색 매칭 필드가 아니다. */
   slug: string
   /** 정밀 타임스탬프. 불변. */
@@ -10,11 +10,11 @@ export type IngredientFrontmatter = {
   deprecatedAt?: string
 }
 
-/** 디스크에서 읽어들인 ingredient 하나. id = 파일명(확장자 제외). */
-export type IngredientFile = {
+/** 디스크에서 읽어들인 nut 하나. id = 파일명(확장자 제외). */
+export type NutFile = {
   /** 파일명(=id). `YYYY-MM-DD-{slug}-{unique_id}`. wikilink 타겟이자 read의 핸들. */
   id: string
-  frontmatter: IngredientFrontmatter
+  frontmatter: NutFrontmatter
   /** frontmatter 아래 마크다운 본문. content-address는 이것만 해싱한다. */
   body: string
 }
