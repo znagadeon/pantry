@@ -11,7 +11,7 @@
 // content-address가 거짓이 되므로. semantic이 이 훅을 요구해 코어가 afterFix를 열었다.
 // 진짜 내용 변화는 여전히 fix가 아니라 새 노트+deprecate로 다뤄진다.
 
-import { bodyHash, type IngredientFile, type Plugin, type QueryHit } from '@pantry/core'
+import { bodyHash, type IngredientFile, type Plugin, type QueryHit } from '@pantrykb/core'
 import { cosine, type Embedder, localEmbedder } from './embedder.js'
 import { readAllVecs, writeVec, deleteVec, type VecRecord } from './store.js'
 

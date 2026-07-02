@@ -1,6 +1,15 @@
 {
-  "name": "@pantry/plugin-semantic",
-  "version": "0.0.0",
+  "name": "@pantrykb/plugin-semantic",
+  "version": "0.1.0",
+  "description": "pantry 벡터 검색 plugin — 로컬 임베딩으로 lexical query를 보강한다(union + lexical floor). afterCreate/afterFix에서 임베딩, afterQuery에서 의미적 이웃을 합집합으로 보탬.",
+  "license": "MIT",
+  "author": "Kim Songhyun",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/znagadeon/pantry.git",
+    "directory": "plugins/semantic"
+  },
+  "keywords": ["pantry", "pantry-plugin", "embeddings", "semantic-search", "vector-search"],
   "type": "module",
   "exports": {
     ".": {
@@ -10,7 +19,10 @@
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "files": ["dist"],
+  "files": ["dist", "LICENSE"],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit"
@@ -19,9 +31,9 @@
     "@huggingface/transformers": "^3.0.0"
   },
   "peerDependencies": {
-    "@pantry/core": "workspace:*"
+    "@pantrykb/core": "workspace:^"
   },
   "devDependencies": {
-    "@pantry/core": "workspace:*"
+    "@pantrykb/core": "workspace:*"
   }
 }

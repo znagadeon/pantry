@@ -17,7 +17,7 @@ import type {
   PluginContext,
   QueryHit,
   QueryInput,
-} from '@pantry/core'
+} from '@pantrykb/core'
 import type { Config, PluginEntry } from './config.js'
 
 /** plugin 패키지를 default export까지 풀어 돌려주는 importer. 테스트가 주입 가능. */
@@ -62,7 +62,7 @@ function contextFor(pantry: Pantry, root: string, name: string): PluginContext {
  */
 export class Runtime {
   // pkg = 설치·dispatch용 npm 이름(plugin run <pkg>). plugin.name = 격리 구역 dir.
-  // 둘은 일부러 다를 수 있다(예: pkg @pantry/plugin-random, name random) — 섞지 않는다.
+  // 둘은 일부러 다를 수 있다(예: pkg @pantrykb/plugin-random, name random) — 섞지 않는다.
   private readonly loaded: { pkg: string; plugin: Plugin; ctx: PluginContext }[]
 
   constructor(

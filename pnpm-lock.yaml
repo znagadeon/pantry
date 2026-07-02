@@ -23,7 +23,7 @@ importers:
 
   packages/cli:
     dependencies:
-      '@pantry/core':
+      '@pantrykb/core':
         specifier: workspace:*
         version: link:../core
 
@@ -31,7 +31,7 @@ importers:
 
   plugins/random:
     devDependencies:
-      '@pantry/core':
+      '@pantrykb/core':
         specifier: workspace:*
         version: link:../../packages/core
 
@@ -41,7 +41,7 @@ importers:
         specifier: ^3.0.0
         version: 3.8.1
     devDependencies:
-      '@pantry/core':
+      '@pantrykb/core':
         specifier: workspace:*
         version: link:../../packages/core
 

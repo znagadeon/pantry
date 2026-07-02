@@ -1,7 +1,7 @@
 // argv → 순정 동사·메타 명령 라우팅. config를 읽어 Pantry를 세우고 plugin을 두른 뒤
 // argv를 해당 동사로 넘긴다. 소비자가 AI라 데이터는 JSON으로, 실패는 시끄럽게 돌려준다.
 
-import { Pantry } from '@pantry/core'
+import { Pantry } from '@pantrykb/core'
 import * as config from './config.js'
 import { buildRuntime, type Importer } from './runtime.js'
 

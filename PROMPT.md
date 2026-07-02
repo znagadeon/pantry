@@ -75,15 +75,15 @@ pantry의 역할을 확장한다. **명령을 추가하거나, 기존 명령을 
 
 plugin은 npm 패키지다. `pantry plugin`의 세 서브커맨드로 관리한다.
 
-- **add** — `pantry plugin add @pantry/summary '<description>'`. 패키지명과 사람이 쓴 한 줄 설명을 config의 활성 목록에 등록순으로 append한다. pantry는 패키지가 뭘 하는지 모른다 — 이름과 설명은 불투명한 핸들일 뿐이고, 등록 순서가 곧 훅 체인 순서다.
-- **remove** — `pantry plugin remove @pantry/summary`. 목록에서 뺀다. 부산물 정리는 plugin 몫(순정은 격리 구역을 지울 뿐).
+- **add** — `pantry plugin add @pantrykb/summary '<description>'`. 패키지명과 사람이 쓴 한 줄 설명을 config의 활성 목록에 등록순으로 append한다. pantry는 패키지가 뭘 하는지 모른다 — 이름과 설명은 불투명한 핸들일 뿐이고, 등록 순서가 곧 훅 체인 순서다.
+- **remove** — `pantry plugin remove @pantrykb/summary`. 목록에서 뺀다. 부산물 정리는 plugin 몫(순정은 격리 구역을 지울 뿐).
 - **list** — 활성 목록을 등록순으로, 각자의 description과 함께 보여준다.
 
 pantry가 하는 일은 목록을 config에 갈무리하고(등록순 보존) 실행 시 순서대로 `import`해 훅·명령을 거는 것뿐이다. 설치 자체(패키지가 디스크에 있게 하는 것)는 npm의 몫이고 pantry는 이름으로 로드만 한다.
 
 ### 실행
 
-plugin이 새로 다는 명령은 **패키지명 아래에 가둬** 부른다: `pantry plugin run @pantry/summary search <나머지 argv>`. pantry는 argv를 그 패키지의 `commands['search'].run(나머지, ctx)`로 넘길 뿐, 이름을 top-level에 병합하지 않는다. 이게 dumb 원칙의 따름정리다 — top-level로 올리면 "누구의 `search`가 이기나"를 pantry가 판단해야 하는데, 패키지명으로 가두면 **충돌이란 게 발생 불가능**하다. hooks가 core 동사에 얹히는 암묵적 보강이라면, commands는 `run`으로만 불리는 명시적 동사다(자동 발화 없음).
+plugin이 새로 다는 명령은 **패키지명 아래에 가둬** 부른다: `pantry plugin run @pantrykb/summary search <나머지 argv>`. pantry는 argv를 그 패키지의 `commands['search'].run(나머지, ctx)`로 넘길 뿐, 이름을 top-level에 병합하지 않는다. 이게 dumb 원칙의 따름정리다 — top-level로 올리면 "누구의 `search`가 이기나"를 pantry가 판단해야 하는데, 패키지명으로 가두면 **충돌이란 게 발생 불가능**하다. hooks가 core 동사에 얹히는 암묵적 보강이라면, commands는 `run`으로만 불리는 명시적 동사다(자동 발화 없음).
 
 `ctx`엔 순정 read-only 동사(`query`/`read`)만 준다. plugin 명령도 KB를 생 fs가 아니라 순정 동사로만 보게 해 "코어 불가침"을 실행 경로에서도 지킨다.
 

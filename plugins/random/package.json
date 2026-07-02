@@ -1,6 +1,15 @@
 {
-  "name": "@pantry/plugin-random",
-  "version": "0.0.0",
+  "name": "@pantrykb/plugin-random",
+  "version": "0.1.0",
+  "description": "pantry 예시 plugin — 노트 하나를 무작위로 꺼내는 random 명령을 추가한다. plugin 계약을 살아있는 코드로 검증하는 최소 예제.",
+  "license": "MIT",
+  "author": "Kim Songhyun",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/znagadeon/pantry.git",
+    "directory": "plugins/random"
+  },
+  "keywords": ["pantry", "pantry-plugin"],
   "type": "module",
   "exports": {
     ".": {
@@ -10,15 +19,18 @@
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "files": ["dist"],
+  "files": ["dist", "LICENSE"],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "peerDependencies": {
-    "@pantry/core": "workspace:*"
+    "@pantrykb/core": "workspace:^"
   },
   "devDependencies": {
-    "@pantry/core": "workspace:*"
+    "@pantrykb/core": "workspace:*"
   }
 }

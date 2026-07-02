@@ -8,7 +8,7 @@
 import { mkdtemp, rm, readdir } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { bodyHash, Pantry, type PluginContext } from '@pantry/core'
+import { bodyHash, Pantry, type PluginContext } from '@pantrykb/core'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { createSemanticPlugin } from './index.js'
 import type { Embedder } from './embedder.js'

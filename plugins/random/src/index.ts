@@ -2,7 +2,7 @@
 // plugin 계약을 살아있는 코드로 검증하는 용도 — commands만 쓰고 hooks는 안 건다.
 // KB는 ctx.query로만 본다(read-only). 생 fs는 만지지 않는다.
 
-import type { Plugin } from '@pantry/core'
+import type { Plugin } from '@pantrykb/core'
 
 const plugin: Plugin = {
   name: 'random',
