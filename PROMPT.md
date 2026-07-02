@@ -134,6 +134,7 @@ hooks: {
   beforeCreate?: (ctx, input) => input           // 입력 반환(변형) 또는 throw(abort)
   beforeDelete?: (ctx, input) => input           // 주로 abort 가드(예: 링크 남은 노트 삭제 막기)
   afterCreate?:  (ctx, input, result) => void    // 부산물만. 코어 결과는 못 바꿈
+  afterFix?:     (ctx, result) => void           // 본문-파생 부산물 재생성(재임베딩 등)
   afterDelete?:  (ctx, input) => void            // 자기 부산물 정리
   afterDeprecate?: (ctx, input) => void          // 부산물 정리
   afterQuery?:   (ctx, input, hits) => hits       // 관련도 목록 rerank/합집합 후 반환
@@ -142,7 +143,7 @@ hooks: {
 ```
 
 - **before** — `create`와 `delete`에만. 입력 타입 → 입력 타입이라 파이프처럼 앞 훅 출력이 뒤 훅 입력이 된다. 반환으로 변형, throw로 abort. before를 이 둘로 한정하는 이유: 실제 용례(create의 입력 변형, delete의 abort 가드)가 여기뿐이다. 필요해지면 그때 연다(YAGNI).
-- **after의 두 갈래** — query/read처럼 **출력을 보강**하는 훅은 `result → result`(반환값이 다음 훅으로 이어짐). create/delete/deprecate처럼 **부산물만 만지는** 훅은 `→ void`. 후자가 void인 건 코어 결과(파일이 써졌다/지워졌다)를 plugin이 못 바꾸게 하려는 것 — "코어 불가침"을 타입으로 강제한다.
+- **after의 두 갈래** — query/read처럼 **출력을 보강**하는 훅은 `result → result`(반환값이 다음 훅으로 이어짐). create/fix/delete/deprecate처럼 **부산물만 만지는** 훅은 `→ void`. 후자가 void인 건 코어 결과(파일이 써졌다/지워졌다)를 plugin이 못 바꾸게 하려는 것 — "코어 불가침"을 타입으로 강제한다. **afterFix가 열린 내력**: 원래 훅을 create·delete·query·read·deprecate로 한정했으나(YAGNI), semantic이 fix 후 본문-파생 부산물(벡터·hash)을 갱신할 자리를 요구했다 — 안 열면 fix된 노트의 content-address가 거짓이 된다. beforeFix(입력 변형)는 아직 용례가 없어 닫아둔다.
 - **plugin 간 상호호출 없음.** 각 plugin은 순정 코어만 본다. 옆 plugin의 명령·훅은 못 부른다. 이게 열리면 등록순 파이프가 그래프로 변질되고 멍청함이 깨진다. 파이프는 한 방향, 한 겹.
 
 ### 부산물
@@ -152,7 +153,7 @@ plugin의 모든 부산물은 plugin 소유이며, 순정이 정한 격리 구�
 ### 후보
 
 - **random** — 노트 하나 무작위로 꺼냄 (새 명령어 추가).
-- **semantic** — 벡터 임베딩으로 검색 보강(`plugins/semantic`, 구현됨). afterCreate에서 노트를 임베딩해 격리 구역(`vec/{id}.json`, `{model,hash,vector}`)에 쟁이고, afterQuery에서 질의를 임베딩해 의미적 이웃을 **합집합 + lexical floor**로 보탠다 — lexical hit은 순서·점수 그대로 두고 그 뒤에 벡터 전용 후보만 붙인다(BM25·코사인을 한 스케일로 안 섞음). 벡터엔 `model`을 태그해 모델·차원이 바뀌면 옛 벡터를 무시하고, 이웃은 `ctx.read`로 실체 검증해 삭제·deprecated를 거른다. embedder는 주입식(core의 now/newId와 같은 결) — 실사용 기본은 로컬 다국어 모델(multilingual-e5-small, 오프라인·무키), 테스트는 결정적 fake. fix엔 훅이 없어 벡터가 옛 hash로 살짝 낡을 수 있으나 fix가 의미보존 교정이라 감수. 순수 벡터 검색은 포기 — lexical이 항상 바닥.
+- **semantic** — 벡터 임베딩으로 검색 보강(`plugins/semantic`, 구현됨). afterCreate에서 노트를 임베딩해 격리 구역(`vec/{id}.json`, `{model,hash,vector}`)에 쟁이고, afterQuery에서 질의를 임베딩해 의미적 이웃을 **합집합 + lexical floor**로 보탠다 — lexical hit은 순서·점수 그대로 두고 그 뒤에 벡터 전용 후보만 붙인다(BM25·코사인을 한 스케일로 안 섞음). 벡터엔 `model`을 태그해 모델·차원이 바뀌면 옛 벡터를 무시하고, 이웃은 `ctx.read`로 실체 검증해 삭제·deprecated를 거른다. embedder는 주입식(core의 now/newId와 같은 결) — 실사용 기본은 로컬 다국어 모델(multilingual-e5-small, 오프라인·무키), 테스트는 결정적 fake. create·fix 둘 다 afterCreate/afterFix로 (재)임베딩하므로 fix 후에도 벡터·hash가 새 본문을 좇는다(content-address 불일치 없음). 순수 벡터 검색은 포기 — lexical이 항상 바닥.
 
 ## 스케일
 

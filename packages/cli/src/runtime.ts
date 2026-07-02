@@ -109,9 +109,13 @@ export class Runtime {
     return note
   }
 
-  /** fix엔 훅이 없다(PROMPT: before/after는 create·delete·query·read·deprecate만). */
   async fix(id: string, body: string): Promise<IngredientFile> {
-    return this.pantry.fix(id, body)
+    const result = await this.pantry.fix(id, body)
+    // afterFix: 부산물만(void). 본문-파생 부산물(예: 벡터·hash)을 새 본문으로 갱신한다.
+    for (const { plugin, ctx } of this.loaded) {
+      if (plugin.hooks?.afterFix) await plugin.hooks.afterFix(ctx, result)
+    }
+    return result
   }
 
   async deprecate(id: string): Promise<void> {

@@ -8,10 +8,11 @@
 import { mkdtemp, rm, readdir } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { Pantry, type PluginContext } from '@pantry/core'
+import { bodyHash, Pantry, type PluginContext } from '@pantry/core'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { createSemanticPlugin } from './index.js'
 import type { Embedder } from './embedder.js'
+import { readVec } from './store.js'
 
 let root: string
 
@@ -120,6 +121,29 @@ describe('semantic plugin', () => {
 
     const shown = await plugin.hooks!.afterQuery!(ctx, { text: 'topic', includeDeprecated: true }, [])
     expect(shown.map((h) => h.id)).toContain(dep.id)
+  })
+
+  it('afterFix re-embeds so the stored vector tracks the new body', async () => {
+    const pantry = makePantry()
+    const ctx = ctxFor(pantry)
+    // 두 축: 'topic'과 'other'. 처음엔 topic으로 임베딩됐다가 fix로 other로 옮긴다.
+    const plugin = createSemanticPlugin(fakeEmbedder([['topic'], ['other']]))
+    const f = await pantry.create({ slug: 'f', body: 'about topic' })
+    await plugin.hooks!.afterCreate!(ctx, { slug: 'f', body: f.body }, f)
+
+    // fix 전: 질의 'topic'의 이웃, 'other'의 이웃 아님.
+    expect((await plugin.hooks!.afterQuery!(ctx, { text: 'topic' }, [])).map((h) => h.id)).toContain(f.id)
+    expect((await plugin.hooks!.afterQuery!(ctx, { text: 'other' }, [])).map((h) => h.id)).not.toContain(f.id)
+
+    const fixed = await pantry.fix(f.id, 'about other')
+    await plugin.hooks!.afterFix!(ctx, fixed)
+
+    // fix 후: 축이 뒤집힌다 — 이제 'other'의 이웃, 'topic'의 이웃 아님.
+    expect((await plugin.hooks!.afterQuery!(ctx, { text: 'other' }, [])).map((h) => h.id)).toContain(f.id)
+    expect((await plugin.hooks!.afterQuery!(ctx, { text: 'topic' }, [])).map((h) => h.id)).not.toContain(f.id)
+    // 저장된 hash도 새 본문을 가리킨다(content-address가 거짓말하지 않는다).
+    const rec = await readVec(ctx.dir, f.id)
+    expect(rec!.hash).toBe(bodyHash('about other'))
   })
 
   it('afterDelete removes the orphan vector', async () => {

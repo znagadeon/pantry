@@ -30,6 +30,13 @@ export type PluginHooks = {
   beforeCreate?: (ctx: PluginContext, input: CreateInput) => CreateInput | Promise<CreateInput>
   beforeDelete?: (ctx: PluginContext, id: string) => string | Promise<string>
   afterCreate?: (ctx: PluginContext, input: CreateInput, result: IngredientFile) => void | Promise<void>
+  /**
+   * fix(의미보존 덮어쓰기) 뒤 부산물 갱신(→void, 코어 결과 불가침). result가 새 본문을
+   * 지니므로 재파생(예: 재임베딩)에 충분하다. before/after를 create·delete로만 한정하던
+   * YAGNI를 semantic이 깼다 — fix 후 본문-파생 부산물(벡터·hash)이 낡으면 content-address가
+   * 거짓이 되므로. beforeFix(입력 변형)는 아직 용례가 없어 닫아둔다.
+   */
+  afterFix?: (ctx: PluginContext, result: IngredientFile) => void | Promise<void>
   afterDelete?: (ctx: PluginContext, id: string) => void | Promise<void>
   afterDeprecate?: (ctx: PluginContext, id: string) => void | Promise<void>
   afterQuery?: (ctx: PluginContext, input: QueryInput, hits: QueryHit[]) => QueryHit[] | Promise<QueryHit[]>

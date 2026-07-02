@@ -150,6 +150,20 @@ describe('Runtime hook wiring', () => {
     await expect(rt.runPluginCommand('randy', 'go', [])).rejects.toThrow(/not active/) // name으론 안 걸림
   })
 
+  it('afterFix runs after fix and sees the new body (void, cannot change core result)', async () => {
+    let seenBody = ''
+    const spy: Plugin = {
+      name: 'spy',
+      hooks: { afterFix: (_c, result) => void (seenBody = result.body) },
+    }
+    const pantry = makePantry()
+    const f = await pantry.create({ slug: 's', body: 'typo' })
+    const rt = await buildRuntime(pantry, { root, plugins: entries('spy') }, importerFor({ spy }))
+    const fixed = await rt.fix(f.id, 'fixed')
+    expect(fixed.body).toBe('fixed') // 코어 결과 그대로
+    expect(seenBody).toBe('fixed') // 훅은 새 본문을 본다
+  })
+
   it('beforeDelete guard can abort delete', async () => {
     const guard: Plugin = {
       name: 'guard',

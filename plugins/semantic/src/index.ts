@@ -7,9 +7,9 @@
 // 대체하지 않는다 — lexical hit은 순서·점수 그대로 두고, 그 뒤에 벡터 전용 후보만
 // 덧붙인다(union + lexical floor). "순수 벡터는 포기, lexical은 성역"이 설계다.
 //
-// fix엔 훅이 없어(순정이 안 열었다) 본문을 고쳐도 벡터는 옛 hash로 남아 살짝 낡을 수
-// 있다. 그러나 fix는 "의미보존 오타교정" 계약이라 임베딩이 크게 흔들리지 않으므로
-// 이 드리프트는 감수한다. 진짜 내용 변화는 fix가 아니라 새 노트+deprecate로 다뤄진다.
+// fix(의미보존 덮어쓰기)도 afterFix로 재임베딩한다 — 본문이 바뀌면 벡터·hash가 낡아
+// content-address가 거짓이 되므로. semantic이 이 훅을 요구해 코어가 afterFix를 열었다.
+// 진짜 내용 변화는 여전히 fix가 아니라 새 노트+deprecate로 다뤄진다.
 
 import { bodyHash, type IngredientFile, type Plugin, type QueryHit } from '@pantry/core'
 import { cosine, type Embedder, localEmbedder } from './embedder.js'
@@ -21,6 +21,14 @@ const NEIGHBORS = 10
 // 이 코사인 미만은 "이웃"으로 안 친다. 정규화 벡터라 [-1,1] 범위.
 const MIN_SIMILARITY = 0.75
 
+/** 노트 하나를 임베딩해 격리 구역에 벡터 레코드로 쓴다. create·fix가 공유. */
+async function embed(embedder: Embedder, dir: string, note: IngredientFile): Promise<void> {
+  const [vector] = await embedder.embedDocuments([note.body])
+  if (!vector) return
+  const rec: VecRecord = { model: embedder.model, hash: bodyHash(note.body), vector }
+  await writeVec(dir, note.id, rec)
+}
+
 /** embedder를 주입해 plugin을 만든다. 기본은 로컬 다국어 모델. */
 export function createSemanticPlugin(embedder: Embedder = localEmbedder()): Plugin {
   return {
@@ -29,10 +37,12 @@ export function createSemanticPlugin(embedder: Embedder = localEmbedder()): Plug
     hooks: {
       // 새 노트를 임베딩해 격리 구역에 쟁인다. 코어 결과는 못 바꾼다(void).
       async afterCreate(ctx, _input, result: IngredientFile) {
-        const [vector] = await embedder.embedDocuments([result.body])
-        if (!vector) return
-        const rec: VecRecord = { model: embedder.model, hash: bodyHash(result.body), vector }
-        await writeVec(ctx.dir, result.id, rec)
+        await embed(embedder, ctx.dir, result)
+      },
+
+      // fix(의미보존 덮어쓰기) 후 재임베딩 — 낡은 벡터·hash를 새 본문으로 덮는다.
+      async afterFix(ctx, result: IngredientFile) {
+        await embed(embedder, ctx.dir, result)
       },
 
       // orphan 방지: 노트가 사라지면 그 벡터도 지운다.
