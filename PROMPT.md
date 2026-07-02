@@ -127,23 +127,27 @@ type PluginContext = {
 }
 ```
 
-훅 시그니처. **before와 after의 비대칭이 핵심이다.**
+훅 시그니처. **6개 동사 전부에 before/after가 대칭으로 있다. 핵심 비대칭은 "어느 동사에 있나"가 아니라 before/after의 방향이다.**
 
 ```ts
 hooks: {
-  beforeCreate?: (ctx, input) => input           // 입력 반환(변형) 또는 throw(abort)
-  beforeDelete?: (ctx, input) => input           // 주로 abort 가드(예: 링크 남은 노트 삭제 막기)
-  afterCreate?:  (ctx, input, result) => void    // 부산물만. 코어 결과는 못 바꿈
-  afterFix?:     (ctx, result) => void           // 본문-파생 부산물 재생성(재임베딩 등)
-  afterDelete?:  (ctx, input) => void            // 자기 부산물 정리
-  afterDeprecate?: (ctx, input) => void          // 부산물 정리
-  afterQuery?:   (ctx, input, hits) => hits       // 관련도 목록 rerank/합집합 후 반환
-  afterRead?:    (ctx, input, note) => note       // 관련 노트·경고 덧붙임
+  beforeCreate?:   (ctx, input) => input          // body 변형 또는 throw(abort)
+  beforeFix?:      (ctx, id, body) => body         // body 변형 또는 abort. id는 정체성이라 읽기용
+  beforeQuery?:    (ctx, input) => input           // 검색 text 변형(쿼리 확장·번역) 또는 abort
+  beforeRead?:     (ctx, id) => id                 // id redirect 또는 abort
+  beforeDeprecate?:(ctx, id) => id                 // abort 가드(링크 남은 노트 막기) 또는 redirect
+  beforeDelete?:   (ctx, id) => id                 // abort 가드(예: 링크 남은 노트 삭제 막기)
+  afterCreate?:    (ctx, input, result) => void    // 부산물만. 코어 결과는 못 바꿈
+  afterFix?:       (ctx, result) => void           // 본문-파생 부산물 재생성(재임베딩 등)
+  afterQuery?:     (ctx, input, hits) => hits       // 관련도 목록 rerank/합집합 후 반환
+  afterRead?:      (ctx, input, note) => note       // 관련 노트·경고 덧붙임
+  afterDeprecate?: (ctx, id) => void               // 부산물 정리
+  afterDelete?:    (ctx, id) => void               // 자기 부산물 정리
 }
 ```
 
-- **before** — `create`와 `delete`에만. 입력 타입 → 입력 타입이라 파이프처럼 앞 훅 출력이 뒤 훅 입력이 된다. 반환으로 변형, throw로 abort. before를 이 둘로 한정하는 이유: 실제 용례(create의 입력 변형, delete의 abort 가드)가 여기뿐이다. 필요해지면 그때 연다(YAGNI).
-- **after의 두 갈래** — query/read처럼 **출력을 보강**하는 훅은 `result → result`(반환값이 다음 훅으로 이어짐). create/fix/delete/deprecate처럼 **부산물만 만지는** 훅은 `→ void`. 후자가 void인 건 코어 결과(파일이 써졌다/지워졌다)를 plugin이 못 바꾸게 하려는 것 — "코어 불가침"을 타입으로 강제한다. **afterFix가 열린 내력**: 원래 훅을 create·delete·query·read·deprecate로 한정했으나(YAGNI), semantic이 fix 후 본문-파생 부산물(벡터·hash)을 갱신할 자리를 요구했다 — 안 열면 fix된 노트의 content-address가 거짓이 된다. beforeFix(입력 변형)는 아직 용례가 없어 닫아둔다.
+- **표면은 균일, 판단은 plugin.** 6개 동사 전부에 before/after를 연다 — 무엇에 훅을 걸지 core가 미리 재단하지 않는다("똑똑함은 위 레이어로 민다"). before가 id를 redirect하든, 순수 관찰만(로깅·감사) 하든 plugin의 책임이다. core는 등록 체인을 멍청하게 돌릴 뿐. before 표면을 좁게 여는 건 "shape/veto할 게 없어 보인다"는 core의 판단을 강요하는 것이라 이 원칙과 어긋난다 — 표면을 열고 상상은 작가에게 맡긴다.
+- **진짜 비대칭 = before/after의 방향.** before는 **입력을 shape**(input→input, 파이프처럼 앞 출력이 뒤 입력)하거나 throw로 abort한다. id만 받는 동사(read/deprecate/delete)의 before는 id를 redirect하거나 abort한다. after는 두 갈래다: query/read처럼 **출력을 보강**하면 `result→result`, create/fix/deprecate/delete처럼 **부산물만 만지면** `→void`. void는 코어 결과(파일이 써졌다/지워졌다)를 plugin이 못 바꾸게 타입으로 강제한다("코어 불가침").
 - **plugin 간 상호호출 없음.** 각 plugin은 순정 코어만 본다. 옆 plugin의 명령·훅은 못 부른다. 이게 열리면 등록순 파이프가 그래프로 변질되고 멍청함이 깨진다. 파이프는 한 방향, 한 겹.
 
 ### 부산물

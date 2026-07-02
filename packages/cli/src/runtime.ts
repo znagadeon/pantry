@@ -92,25 +92,41 @@ export class Runtime {
   }
 
   async query(input: QueryInput): Promise<QueryHit[]> {
-    let hits = await this.pantry.query(input)
-    // afterQuery: 출력 보강. 반환값이 다음 훅 입력(result→result).
+    // beforeQuery: 검색 text를 등록순 파이프로 shape(쿼리 확장·번역 등)하거나 abort.
+    let shaped = input
     for (const { plugin, ctx } of this.loaded) {
-      if (plugin.hooks?.afterQuery) hits = await plugin.hooks.afterQuery(ctx, input, hits)
+      if (plugin.hooks?.beforeQuery) shaped = await plugin.hooks.beforeQuery(ctx, shaped)
+    }
+    let hits = await this.pantry.query(shaped)
+    // afterQuery: 출력 보강. 반환값이 다음 훅 입력(result→result). shape된 input을 넘긴다.
+    for (const { plugin, ctx } of this.loaded) {
+      if (plugin.hooks?.afterQuery) hits = await plugin.hooks.afterQuery(ctx, shaped, hits)
     }
     return hits
   }
 
   async read(id: string): Promise<IngredientFile | null> {
-    let note = await this.pantry.read(id)
+    // beforeRead: id를 redirect하거나 abort. 등록순 파이프.
+    let target = id
+    for (const { plugin, ctx } of this.loaded) {
+      if (plugin.hooks?.beforeRead) target = await plugin.hooks.beforeRead(ctx, target)
+    }
+    let note = await this.pantry.read(target)
     if (note === null) return null // 없는 노트엔 afterRead를 돌리지 않는다(보강할 대상이 없다).
     for (const { plugin, ctx } of this.loaded) {
-      if (plugin.hooks?.afterRead) note = await plugin.hooks.afterRead(ctx, id, note)
+      if (plugin.hooks?.afterRead) note = await plugin.hooks.afterRead(ctx, target, note)
     }
     return note
   }
 
   async fix(id: string, body: string): Promise<IngredientFile> {
-    const result = await this.pantry.fix(id, body)
+    // beforeFix: body를 등록순 파이프로 shape하거나 throw로 abort. id는 정체성이라 안 넘긴다.
+    // create와 대칭 — beforeCreate가 거는 body 변형이 fix에도 걸려야 plugin invariant가 안 샌다.
+    let shaped = body
+    for (const { plugin, ctx } of this.loaded) {
+      if (plugin.hooks?.beforeFix) shaped = await plugin.hooks.beforeFix(ctx, id, shaped)
+    }
+    const result = await this.pantry.fix(id, shaped)
     // afterFix: 부산물만(void). 본문-파생 부산물(예: 벡터·hash)을 새 본문으로 갱신한다.
     for (const { plugin, ctx } of this.loaded) {
       if (plugin.hooks?.afterFix) await plugin.hooks.afterFix(ctx, result)
@@ -119,10 +135,15 @@ export class Runtime {
   }
 
   async deprecate(id: string): Promise<void> {
-    await this.pantry.deprecate(id)
+    // beforeDeprecate: abort 가드(예: 링크 남은 노트 deprecate 막기) 또는 id redirect. 등록순 파이프.
+    let target = id
+    for (const { plugin, ctx } of this.loaded) {
+      if (plugin.hooks?.beforeDeprecate) target = await plugin.hooks.beforeDeprecate(ctx, target)
+    }
+    await this.pantry.deprecate(target)
     // afterDeprecate: 부산물 정리(orphan 방지).
     for (const { plugin, ctx } of this.loaded) {
-      if (plugin.hooks?.afterDeprecate) await plugin.hooks.afterDeprecate(ctx, id)
+      if (plugin.hooks?.afterDeprecate) await plugin.hooks.afterDeprecate(ctx, target)
     }
   }
 

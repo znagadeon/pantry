@@ -150,6 +150,87 @@ describe('Runtime hook wiring', () => {
     await expect(rt.runPluginCommand('randy', 'go', [])).rejects.toThrow(/not active/) // name으론 안 걸림
   })
 
+  it('beforeFix chains in registration order and shapes the written body (symmetric with beforeCreate)', async () => {
+    const first: Plugin = {
+      name: 'first',
+      hooks: { beforeFix: (_c, _id, body) => `${body} [first]` },
+    }
+    const second: Plugin = {
+      name: 'second',
+      hooks: { beforeFix: (_c, _id, body) => `${body} [second]` },
+    }
+    const pantry = makePantry()
+    const f = await pantry.create({ slug: 's', body: 'orig' })
+    const rt = await buildRuntime(
+      pantry,
+      { root, plugins: entries('first', 'second') },
+      importerFor({ first, second }),
+    )
+    const fixed = await rt.fix(f.id, 'base')
+    expect(fixed.body).toBe('base [first] [second]')
+    expect((await pantry.read(f.id))!.body).toBe('base [first] [second]') // 디스크에도 shape된 body
+  })
+
+  it('beforeQuery shapes the search text before matching (query expansion/translation)', async () => {
+    // 노트 본문엔 'expanded'만 있고 caller는 'orig'로 검색 → beforeQuery가 text를 바꿔 매칭시킨다.
+    const expand: Plugin = {
+      name: 'expand',
+      hooks: { beforeQuery: (_c, input) => ({ ...input, text: `${input.text} expanded` }) },
+    }
+    const pantry = makePantry()
+    const hit = await pantry.create({ slug: 'a', body: 'expanded content' })
+    await pantry.create({ slug: 'b', body: 'unrelated' })
+    const rt = await buildRuntime(pantry, { root, plugins: entries('expand') }, importerFor({ expand }))
+    const hits = await rt.query({ text: 'orig' })
+    expect(hits.map((h) => h.id)).toContain(hit.id)
+  })
+
+  it('beforeRead redirects the id before reading', async () => {
+    const redirect: Plugin = {
+      name: 'redirect',
+      hooks: { beforeRead: () => targetId },
+    }
+    const pantry = makePantry()
+    await pantry.create({ slug: 'a', body: 'note A' })
+    const b = await pantry.create({ slug: 'b', body: 'note B' })
+    const targetId = b.id
+    const rt = await buildRuntime(pantry, { root, plugins: entries('redirect') }, importerFor({ redirect }))
+    const note = await rt.read('does-not-matter')
+    expect(note!.id).toBe(b.id) // 다른 id로 요청해도 redirect된 노트를 읽는다
+  })
+
+  it('beforeDeprecate guard can abort deprecate', async () => {
+    const guard: Plugin = {
+      name: 'guard',
+      hooks: {
+        beforeDeprecate: () => {
+          throw new Error('has inbound links')
+        },
+      },
+    }
+    const pantry = makePantry()
+    const f = await pantry.create({ slug: 's', body: 'x' })
+    const rt = await buildRuntime(pantry, { root, plugins: entries('guard') }, importerFor({ guard }))
+    await expect(rt.deprecate(f.id)).rejects.toThrow('inbound links')
+    expect((await pantry.read(f.id))!.frontmatter.deprecatedAt).toBeUndefined() // 여전히 유효
+  })
+
+  it('beforeFix throw aborts loudly and never overwrites', async () => {
+    const guard: Plugin = {
+      name: 'guard',
+      hooks: {
+        beforeFix: () => {
+          throw new Error('no fix')
+        },
+      },
+    }
+    const pantry = makePantry()
+    const f = await pantry.create({ slug: 's', body: 'orig' })
+    const rt = await buildRuntime(pantry, { root, plugins: entries('guard') }, importerFor({ guard }))
+    await expect(rt.fix(f.id, 'changed')).rejects.toThrow('no fix')
+    expect((await pantry.read(f.id))!.body).toBe('orig') // 원본 그대로
+  })
+
   it('afterFix runs after fix and sees the new body (void, cannot change core result)', async () => {
     let seenBody = ''
     const spy: Plugin = {
